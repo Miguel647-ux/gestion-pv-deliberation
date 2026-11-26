@@ -1,76 +1,126 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Années académiques — ENEAM PV Archive</title>
-    <style>
-        body { font-family: system-ui, sans-serif; margin: 2rem; }
-        h1 { margin-bottom: 1rem; }
-        .flash { padding: .75rem 1rem; margin-bottom: 1rem; border-radius: 4px; }
-        .flash-status { background: #dcfce7; color: #166534; }
-        .flash-error  { background: #fee2e2; color: #991b1b; }
-        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-        th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; }
-        th { background: #f3f4f6; }
-        .badge { padding: .15rem .5rem; border-radius: 4px; font-size: .85rem; }
-        .badge-active { background: #dbeafe; color: #1e40af; }
-        .actions a, .actions button { margin-right: .5rem; }
-        .btn-link { background: none; border: none; color: #b91c1c; cursor: pointer; padding: 0; font: inherit; }
-    </style>
-</head>
-<body>
-    <h1>Années académiques ({{ $years->count() }})</h1>
-    <p>
-        <a href="{{ route('dashboard') }}">← Dashboard</a> &nbsp;|&nbsp;
-        <a href="{{ route('admin.years.create') }}">+ Nouvelle année</a>
-    </p>
+<x-app-layout>
+    <div class="max-w-[1280px] mx-auto px-margin py-space-lg w-full">
+        <!-- Breadcrumb & Header -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-space-md pb-space-lg border-b border-outline-variant">
+            <div class="space-y-space-xs">
+                <div class="flex items-center gap-space-sm text-outline font-label-sm text-label-sm">
+                    <span>Administration</span>
+                    <span>/</span>
+                    <span class="text-on-surface">Années académiques</span>
+                </div>
+                <h1 class="font-serif text-[32px] font-semibold text-on-surface tracking-tight leading-tight">
+                    Années académiques
+                </h1>
+                <p class="font-body-md text-body-md text-secondary">
+                    Gestion des sessions universitaires et désignation de l'année en cours
+                </p>
+            </div>
 
-    @if (session('status'))
-        <div class="flash flash-status">{{ session('status') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="flash flash-error">{{ session('error') }}</div>
-    @endif
+            <div class="flex items-center gap-space-sm pt-space-xs sm:pt-0">
+                <a
+                    href="{{ route('admin.years.create') }}"
+                    class="inline-flex items-center gap-space-xs bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md px-space-md py-space-sm rounded transition-colors"
+                >
+                    <svg class="w-4 h-4 text-on-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Ajouter une année</span>
+                </a>
+            </div>
+        </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Libellé</th>
-                <th>Début</th>
-                <th>Fin</th>
-                <th>Statut</th>
-                <th>PV rattachés</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($years as $year)
-                <tr>
-                    <td>{{ $year->label }}</td>
-                    <td>{{ $year->starts_on->format('d/m/Y') }}</td>
-                    <td>{{ $year->ends_on->format('d/m/Y') }}</td>
-                    <td>
-                        @if ($year->is_active)
-                            <span class="badge badge-active">Active</span>
-                        @else
-                            —
-                        @endif
-                    </td>
-                    <td>{{ $year->deliberation_pvs_count }}</td>
-                    <td class="actions">
-                        <a href="{{ route('admin.years.edit', $year) }}">Modifier</a>
-                        <form action="{{ route('admin.years.destroy', $year) }}" method="POST" style="display:inline"
-                              onsubmit="return confirm('Supprimer cette année ?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn-link">Supprimer</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="6">Aucune année académique.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-</body>
-</html>
+        <!-- Inventory Summary Strip -->
+        <div class="py-space-md flex flex-wrap items-center justify-between gap-space-md text-body-sm text-secondary border-b border-outline-variant">
+            <div class="flex items-center gap-space-lg">
+                <div>
+                    <span class="text-on-surface font-medium">{{ count($years) }}</span> sessions enregistrées
+                </div>
+                @php
+                    $currentYear = $years->firstWhere('is_active', true);
+                @endphp
+                @if($currentYear)
+                    <div class="w-1 h-1 rounded-full bg-outline-variant"></div>
+                    <div>
+                        Année courante active :
+                        <span class="font-reference-code text-reference-code text-primary-container font-semibold">
+                            {{ $currentYear->label }}
+                        </span>
+                    </div>
+                @endif
+            </div>
+
+            <div class="text-label-sm font-label-sm text-outline">
+                Configuration certifiée ENEAM
+            </div>
+        </div>
+
+        <!-- Academic Years Table -->
+        <div class="w-full overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-outline-variant text-label-sm font-label-sm text-secondary">
+                        <th class="py-space-md px-space-sm font-medium" scope="col">Session</th>
+                        <th class="py-space-md px-space-sm font-medium" scope="col">Date de début</th>
+                        <th class="py-space-md px-space-sm font-medium" scope="col">Date de fin</th>
+                        <th class="py-space-md px-space-sm font-medium" scope="col">Statut</th>
+                        <th class="py-space-md px-space-sm font-medium text-right" scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant text-body-md font-body-md">
+                    @forelse($years as $year)
+                        <tr class="transition-colors hover:bg-surface-container-low">
+                            <!-- Label -->
+                            <td class="py-space-md px-space-sm font-reference-code text-reference-code text-on-surface">
+                                <span>{{ $year->label }}</span>
+                                @if($year->external_id)
+                                    <span class="block text-xs text-outline font-mono">Réf. {{ $year->external_id }}</span>
+                                @endif
+                            </td>
+
+                            <!-- Starts on -->
+                            <td class="py-space-md px-space-sm text-on-surface-variant font-body-sm text-body-sm">
+                                {{ $year->starts_on ? $year->starts_on->format('d/m/Y') : '—' }}
+                            </td>
+
+                            <!-- Ends on -->
+                            <td class="py-space-md px-space-sm text-on-surface-variant font-body-sm text-body-sm">
+                                {{ $year->ends_on ? $year->ends_on->format('d/m/Y') : '—' }}
+                            </td>
+
+                            <!-- Active Status -->
+                            <td class="py-space-md px-space-sm">
+                                @if($year->is_active)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container-high text-primary border border-outline-variant font-medium">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        Année courante
+                                    </span>
+                                @else
+                                    <span class="text-secondary font-body-sm text-body-sm">Inactive</span>
+                                @endif
+                            </td>
+
+                            <!-- Edit Action -->
+                            <td class="py-space-md px-space-sm text-right">
+                                <a
+                                    href="{{ route('admin.years.edit', $year) }}"
+                                    class="inline-flex items-center gap-1 font-label-md text-label-md text-primary-container hover:text-primary hover:underline transition-colors"
+                                >
+                                    <span>Modifier</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-secondary italic">
+                                Aucune année académique enregistrée pour le moment.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</x-app-layout>
