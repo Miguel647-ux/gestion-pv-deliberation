@@ -32,6 +32,13 @@ class DashboardController extends Controller
             ->orderByDesc('academic_years.id')
             ->get();
 
+        $latest = DeliberationPv::query()
+            ->visibleTo($user)
+            ->with(['program', 'level', 'semester', 'academicYear'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
         return view('dashboard', [
             'stats' => [
                 'total' => $total,
@@ -40,6 +47,7 @@ class DashboardController extends Controller
                 'parFiliere' => $parFiliere,
                 'parAnnee' => $parAnnee,
             ],
+            'latest' => $latest,
         ]);
     }
 }
