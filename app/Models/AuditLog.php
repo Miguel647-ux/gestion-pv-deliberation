@@ -15,7 +15,7 @@ class AuditLog extends Model
     public const ACTION_DELETED   = 'deleted';
 
     protected $fillable = [
-        'user_id', 'action', 'deliberation_pv_id', 'details', 'ip_address',
+        'user_id', 'action', 'deliberation_pv_id', 'details',
     ];
 
     public function user(): BelongsTo
@@ -27,4 +27,20 @@ class AuditLog extends Model
     {
         return $this->belongsTo(DeliberationPv::class);
     }
+
+    public static function labels(): array
+{
+    return [
+        self::ACTION_CREATED  => 'Création',
+        self::ACTION_UPDATED  => 'Modification',
+        self::ACTION_ARCHIVED => 'Archivage',
+        self::ACTION_VIEWED   => 'Consultation',
+        self::ACTION_DELETED  => 'Suppression',
+    ];
+}
+
+public function label(): string
+{
+    return self::labels()[$this->action] ?? $this->action;
+}
 }
