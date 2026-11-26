@@ -3,111 +3,79 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AcademicYearRequest;
 use App\Models\AcademicYear;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class AcademicYearController extends Controller
 {
-    public function index(Request $request)
+    public function index(): View
     {
-        $years = AcademicYear::orderByDesc('starts_on')->get();
+        $years = AcademicYear::withCount('deliberationPvs')
+            ->orderByDesc('label')
+            ->get();
 
-        return view('admin.years.index', [
-            'years' => $years,
-        ]);
+        return view('admin.years.index', compact('years'));
     }
 
-    public function create()
+    public function create(): View
     {
         return view('admin.years.create');
     }
 
-    public function store(Request $request)
+    public function store(AcademicYearRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'label' => ['required', 'string', 'max:255', 'unique:academic_years,label'],
-            'starts_on' => ['required', 'date'],
-            'ends_on' => ['required', 'date', 'after:starts_on'],
-            'is_active' => ['nullable', 'boolean'],
-            'is_current' => ['nullable', 'boolean'],
-            'external_id' => ['nullable', 'string', 'max:255'],
-        ], [
-            'label.required' => 'Le libellé de l\'année académique est obligatoire.',
-            'label.unique' => 'Cette année académique existe déjà.',
-            'starts_on.required' => 'La date de début est obligatoire.',
-            'starts_on.date' => 'La date de début doit être une date valide.',
-            'ends_on.required' => 'La date de fin est obligatoire.',
-            'ends_on.date' => 'La date de fin doit être une date valide.',
-            'ends_on.after' => 'La date de fin doit être postérieure à la date de début.',
-        ]);
+        $data = $request->validated();
 
-        $isActive = $request->boolean('is_active') || $request->boolean('is_current');
+        if (! empty($data['is_active'])) {
+            AcademicYear::where('is_active', true)->update(['is_active' => false]);
+        }
 
-        DB::transaction(function () use ($validated, $isActive) {
-            if ($isActive) {
-                AcademicYear::query()->update(['is_active' => false]);
-            }
-
-            AcademicYear::create([
-                'label' => trim($validated['label']),
-                'starts_on' => $validated['starts_on'],
-                'ends_on' => $validated['ends_on'],
-                'is_active' => $isActive,
-                'external_id' => $validated['external_id'] ?? null,
-            ]);
-        });
+        AcademicYear::create($data);
 
         return redirect()
             ->route('admin.years.index')
-            ->with('success', 'Année académique créée avec succès.');
+            ->with('status', 'Année académique créée.');
     }
 
-    public function edit(AcademicYear $year)
+    public function show(AcademicYear $year): RedirectResponse
     {
-        return view('admin.years.edit', [
-            'year' => $year,
-        ]);
+        return redirect()->route('admin.years.edit', $year);
     }
 
-    public function update(Request $request, AcademicYear $year)
+    public function edit(AcademicYear $year): View
     {
-        $validated = $request->validate([
-            'label' => ['required', 'string', 'max:255', Rule::unique('academic_years', 'label')->ignore($year->id)],
-            'starts_on' => ['required', 'date'],
-            'ends_on' => ['required', 'date', 'after:starts_on'],
-            'is_active' => ['nullable', 'boolean'],
-            'is_current' => ['nullable', 'boolean'],
-            'external_id' => ['nullable', 'string', 'max:255'],
-        ], [
-            'label.required' => 'Le libellé de l\'année académique est obligatoire.',
-            'label.unique' => 'Cette année académique existe déjà.',
-            'starts_on.required' => 'La date de début est obligatoire.',
-            'starts_on.date' => 'La date de début doit être une date valide.',
-            'ends_on.required' => 'La date de fin est obligatoire.',
-            'ends_on.date' => 'La date de fin doit être une date valide.',
-            'ends_on.after' => 'La date de fin doit être postérieure à la date de début.',
-        ]);
+        return view('admin.years.edit', compact('year'));
+    }
 
-        $isActive = $request->boolean('is_active') || $request->boolean('is_current');
+    public function update(AcademicYearRequest $request, AcademicYear $year): RedirectResponse
+    {
+        $data = $request->validated();
 
-        DB::transaction(function () use ($year, $validated, $isActive) {
-            if ($isActive) {
-                AcademicYear::where('id', '!=', $year->id)->update(['is_active' => false]);
-            }
+        if (! empty($data['is_active'])) {
+            AcademicYear::where('is_active', true)
+                ->where('id', '!=', $year->id)
+                ->update(['is_active' => false]);
+        }
 
-            $year->update([
-                'label' => trim($validated['label']),
-                'starts_on' => $validated['starts_on'],
-                'ends_on' => $validated['ends_on'],
-                'is_active' => $isActive,
-                'external_id' => $validated['external_id'] ?? null,
-            ]);
-        });
+        $year->update($data);
 
         return redirect()
             ->route('admin.years.index')
-            ->with('success', 'Année académique mise à jour avec succès.');
+            ->with('status', 'Année académique mise à jour.');
+    }
+
+    public function destroy(AcademicYear $year): RedirectResponse
+    {
+        if ($year->deliberationPvs()->exists()) {
+            return back()->with('error', 'Impossible de supprimer : des PV sont rattachés à cette année.');
+        }
+
+        $year->delete();
+
+        return redirect()
+            ->route('admin.years.index')
+            ->with('status', 'Année académique supprimée.');
     }
 }

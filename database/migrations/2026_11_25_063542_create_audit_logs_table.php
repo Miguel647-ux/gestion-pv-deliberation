@@ -18,7 +18,6 @@ $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
 $table->string('action');   // created | updated | submitted | archived | viewed | deleted
 $table->foreignId('deliberation_pv_id')->nullable()->constrained()->nullOnDelete();
 $table->text('details')->nullable();
-$table->string('ip_address', 45)->nullable();
 
 $table->timestamps();
 
