@@ -37,10 +37,12 @@
                     name="label"
                     id="label"
                     required
+                    maxlength="20"
                     value="{{ old('label', $year->label) }}"
                     placeholder="Ex. 2025-2026"
                     class="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors"
                 >
+                <p class="text-label-sm text-outline mt-0.5">Format attendu : AAAA-AAAA (ex. 2025-2026).</p>
                 <x-input-error :messages="$errors->get('label')" class="mt-1" />
             </div>
 
@@ -79,6 +81,7 @@
 
             <!-- Is Active / Current -->
             <div class="pt-space-xs">
+                <input type="hidden" name="is_active" value="0">
                 <label for="is_active" class="inline-flex items-start gap-2 cursor-pointer">
                     <input
                         type="checkbox"

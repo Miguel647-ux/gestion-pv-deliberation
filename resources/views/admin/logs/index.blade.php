@@ -41,7 +41,6 @@
                         <th class="py-space-md px-space-sm font-medium w-48" scope="col">Utilisateur</th>
                         <th class="py-space-md px-space-sm font-medium w-36" scope="col">Action</th>
                         <th class="py-space-md px-space-sm font-medium" scope="col">Description de l'opération</th>
-                        <th class="py-space-md px-space-sm font-medium w-36 text-right" scope="col">Adresse IP</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant font-body-sm text-body-sm text-on-surface">
@@ -62,6 +61,7 @@
                                 @php
                                     $actionLabels = [
                                         'created' => 'Soumission',
+                                        'submitted' => 'Soumission',
                                         'updated' => 'Mise à jour',
                                         'archived' => 'Archivage',
                                         'viewed' => 'Consultation',
@@ -69,7 +69,7 @@
                                     ];
                                     $actionClass = match($log->action) {
                                         'archived' => 'bg-surface-container-high text-primary border border-outline-variant',
-                                        'created' => 'bg-surface-container-low text-primary-container border border-outline-variant',
+                                        'created', 'submitted' => 'bg-surface-container-low text-primary-container border border-outline-variant',
                                         'deleted' => 'bg-error-container text-on-error-container border border-error/30',
                                         default => 'bg-surface-container text-secondary border border-outline-variant',
                                     };
@@ -83,15 +83,10 @@
                             <td class="py-space-md px-space-sm text-on-surface-variant">
                                 {{ $log->details ?? 'Opération effectuée' }}
                             </td>
-
-                            <!-- IP Address -->
-                            <td class="py-space-md px-space-sm text-right text-secondary font-mono text-[12px]">
-                                {{ $log->ip_address ?? '—' }}
-                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-8 text-center text-secondary italic">
+                            <td colspan="4" class="py-8 text-center text-secondary italic">
                                 Aucun événement répertorié dans le journal d'audit.
                             </td>
                         </tr>

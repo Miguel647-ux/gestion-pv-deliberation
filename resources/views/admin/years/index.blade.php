@@ -71,7 +71,10 @@
                         <tr class="transition-colors hover:bg-surface-container-low">
                             <!-- Label -->
                             <td class="py-space-md px-space-sm font-reference-code text-reference-code text-on-surface">
-                                {{ $year->label }}
+                                <span>{{ $year->label }}</span>
+                                @if($year->external_id)
+                                    <span class="block text-xs text-outline font-mono">Réf. {{ $year->external_id }}</span>
+                                @endif
                             </td>
 
                             <!-- Starts on -->

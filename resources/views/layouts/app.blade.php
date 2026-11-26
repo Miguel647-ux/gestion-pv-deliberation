@@ -84,14 +84,14 @@
             </header>
 
             <!-- Session Alerts -->
-            @if (session('success'))
+            @if (session('success') || session('status'))
                 <div class="w-full px-4 sm:px-6 lg:px-8 pt-4">
                     <div class="bg-surface-container-low border border-primary text-primary px-4 py-3 rounded text-body-sm flex items-center justify-between shadow-2xs">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span>{{ session('success') }}</span>
+                            <span>{{ session('success') ?? session('status') }}</span>
                         </div>
                     </div>
                 </div>
