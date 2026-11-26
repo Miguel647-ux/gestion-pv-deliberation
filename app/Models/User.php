@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['name', 'email', 'password', 'role', 'program_id'])]
 #[Hidden(['password', 'remember_token'])]
@@ -38,5 +39,10 @@ class User extends Authenticatable
 public function isCd(): bool
 {
     return $this->role === 'cd';
+}
+
+public function program(): BelongsTo
+{
+    return $this->belongsTo(\App\Models\Program::class);
 }
 }
