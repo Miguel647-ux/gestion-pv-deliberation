@@ -248,6 +248,7 @@ class DeliberationPvController extends Controller
             'action' => $action,
             'deliberation_pv_id' => $pv->id,
             'details' => $details,
+            
         ]);
     }
 }
