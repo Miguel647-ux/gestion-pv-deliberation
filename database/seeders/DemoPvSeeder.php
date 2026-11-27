@@ -47,25 +47,25 @@ PDF;
 
         $pvs = [
     [
-        'level_code'   => 'L2',
-        'semester_code'=> 'S3',
-        'class_name'   => 'L2 IG A',
-        'specialty'    => null,
-        'file'         => 'pvs/demo_l2.pdf',
+        'level_code'    => 'L2',
+        'semester_code' => 'S3',
+        'class_name'    => 'L2 IG A',
+        'specialty'     => null,
+        'file'          => 'pvs/demo_l2.pdf',
     ],
     [
-        'level_code'   => 'L3',
-        'semester_code'=> 'S5',
-        'class_name'   => 'L3 IG-ARI A',
-        'specialty'    => 'ARI',
-        'file'         => 'pvs/demo_ari.pdf',
+        'level_code'    => 'L3',
+        'semester_code' => 'S5',
+        'class_name'    => 'L3 IG-ARI A',
+        'specialty'     => 'ARI',
+        'file'          => 'pvs/demo_ari.pdf',
     ],
     [
-        'level_code'   => 'L3',
-        'semester_code'=> 'S5',
-        'class_name'   => 'L3 IG-AIP A',
-        'specialty'    => 'AIP',
-        'file'         => 'pvs/demo_aip.pdf',
+        'level_code'    => 'L3',
+        'semester_code' => 'S5',
+        'class_name'    => 'L3 IG-AIP A',
+        'specialty'     => 'AIP',
+        'file'          => 'pvs/demo_aip.pdf',
     ],
 ];
 
@@ -93,6 +93,6 @@ PDF;
             );
         }
 
-        $this->command->info('PV de démo créés : 2 (L3 IG ARI et L3 IG AIP)');
+        $this->command->info('PV de démo créés : 3 (L2 IG A, L3 IG ARI et L3 IG AIP)');
     }
 }

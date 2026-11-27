@@ -1,254 +1,110 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Requests;
 
-use App\Http\Requests\StoreDeliberationPvRequest;
-use App\Http\Requests\UpdateDeliberationPvRequest;
-use App\Models\AcademicYear;
-use App\Models\AuditLog;
 use App\Models\DeliberationPv;
 use App\Models\Level;
 use App\Models\Program;
 use App\Models\Semester;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
-class DeliberationPvController extends Controller
+class StoreDeliberationPvRequest extends FormRequest
 {
-    public function index(Request $request)
+    public function authorize(): bool
     {
-        $this->authorize('viewAny', DeliberationPv::class);
-
-        $user = $request->user();
-
-        $query = DeliberationPv::query()
-            ->visibleTo($user)
-            ->with(['academicYear', 'program', 'level', 'semester', 'creator'])
-            ->when($request->filled('class_name'), function ($q) use ($request) {
-                $q->where('class_name', 'like', '%' . $request->string('class_name')->trim() . '%');
-            })
-            ->when($request->filled('academic_year_id'), fn ($q) => $q->where('academic_year_id', $request->integer('academic_year_id')))
-            ->when($request->filled('program_id'), fn ($q) => $q->where('program_id', $request->integer('program_id')))
-            ->when($request->filled('level_id'), fn ($q) => $q->where('level_id', $request->integer('level_id')))
-            ->when($request->filled('semester_id'), fn ($q) => $q->where('semester_id', $request->integer('semester_id')))
-            ->when($request->filled('specialty'), fn ($q) => $q->where('specialty', $request->string('specialty')))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
-            ->latest();
-
-        $pvs = $query->paginate(15)->withQueryString();
-
-        return view('pvs.index', [
-            'pvs' => $pvs,
-            'filters' => $request->only([
-                'class_name', 'academic_year_id', 'program_id',
-                'level_id', 'semester_id', 'specialty', 'status',
-            ]),
-            'programs' => Program::orderBy('name')->get(),
-            'academicYears' => AcademicYear::orderByDesc('id')->get(),
-            'levels' => Level::orderBy('id')->get(),
-            'semesters' => Semester::orderBy('id')->get(),
-            'specialties' => DeliberationPv::SPECIALTIES_IG,
-            'statuses' => DeliberationPv::STATUSES,
-            'levelSemesters' => DeliberationPv::LEVEL_SEMESTERS,
-            'canCreate' => $user->can('create', DeliberationPv::class),
-        ]);
+        return $this->user() && ($this->user()->isDa() || $this->user()->isCd());
     }
 
-    public function create()
+    protected function prepareForValidation(): void
     {
-        $this->authorize('create', DeliberationPv::class);
+        $user = $this->user();
 
-        return view('pvs.create', [
-            'programs' => Program::orderBy('name')->get(),
-            'academicYears' => AcademicYear::orderByDesc('id')->get(),
-            'levels' => Level::orderBy('id')->get(),
-            'semesters' => Semester::orderBy('id')->get(),
-            'specialties' => DeliberationPv::SPECIALTIES_IG,
-            'levelSemesters' => DeliberationPv::LEVEL_SEMESTERS,
-        ]);
-    }
-
-    public function store(StoreDeliberationPvRequest $request)
-    {
-        $this->authorize('create', DeliberationPv::class);
-
-        $user = $request->user();
-        $data = $request->validated();
-
-        $programId = $user->isDa() ? $data['program_id'] : $user->program_id;
-        $program = Program::findOrFail($programId);
-        $level = Level::findOrFail($data['level_id']);
-
-        $specialty = DeliberationPv::specialtyApplies($program->code, $level->code)
-            ? ($data['specialty'] ?? null)
-            : null;
-
-        $createdPvs = DB::transaction(function () use ($data, $programId, $specialty, $user) {
-            $items = [];
-
-            foreach ($data['items'] as $item) {
-                /** @var \Illuminate\Http\UploadedFile $uploadedFile */
-                $uploadedFile = $item['file'];
-                $storedPath = $uploadedFile->store('private/pvs', 'local');
-
-                $pv = DeliberationPv::create([
-                    'academic_year_id' => $data['academic_year_id'],
-                    'program_id' => $programId,
-                    'level_id' => $data['level_id'],
-                    'semester_id' => $data['semester_id'],
-                    'class_name' => trim($item['class_name']),
-                    'specialty' => $specialty,
-                    'deliberation_date' => $data['deliberation_date'],
-                    'file_path' => $storedPath,
-                    'file_name' => $uploadedFile->getClientOriginalName(),
-                    'file_type' => $uploadedFile->getMimeType() ?? $uploadedFile->getClientMimeType(),
-                    'file_size' => $uploadedFile->getSize(),
-                    'status' => DeliberationPv::STATUS_SOUMIS,
-                    'created_by' => $user->id,
-                ]);
-
-                $this->logAction($user->id, AuditLog::ACTION_CREATED, $pv, "PV {$pv->class_name} soumis");
-                $items[] = $pv;
-            }
-
-            return $items;
-        });
-
-        $count = count($createdPvs);
-
-        return redirect()
-            ->route('pvs.index')
-            ->with('success', $count > 1 ? "{$count} PV soumis." : 'PV soumis.');
-    }
-
-    public function show(Request $request, DeliberationPv $pv)
-    {
-        $this->authorize('view', $pv);
-
-        $this->logAction($request->user()->id, AuditLog::ACTION_VIEWED, $pv);
-
-        $pv->load(['academicYear', 'program', 'level', 'semester', 'creator']);
-
-        return view('pvs.show', [
-            'pv' => $pv,
-            'canUpdate' => $request->user()->can('update', $pv),
-            'canArchive' => $request->user()->can('archive', $pv),
-            'canDelete' => $request->user()->can('delete', $pv),
-        ]);
-    }
-
-    public function edit(DeliberationPv $pv)
-    {
-        $this->authorize('update', $pv);
-
-        return view('pvs.edit', [
-            'pv' => $pv,
-            'programs' => Program::orderBy('name')->get(),
-            'academicYears' => AcademicYear::orderByDesc('id')->get(),
-            'levels' => Level::orderBy('id')->get(),
-            'semesters' => Semester::orderBy('id')->get(),
-            'specialties' => DeliberationPv::SPECIALTIES_IG,
-            'levelSemesters' => DeliberationPv::LEVEL_SEMESTERS,
-        ]);
-    }
-
-    public function update(UpdateDeliberationPvRequest $request, DeliberationPv $pv)
-    {
-        $this->authorize('update', $pv);
-
-        $user = $request->user();
-        $data = $request->validated();
-
-        $programId = $user->isDa() ? $data['program_id'] : $pv->program_id;
-        $program = Program::findOrFail($programId);
-        $level = Level::findOrFail($data['level_id']);
-
-        $specialty = DeliberationPv::specialtyApplies($program->code, $level->code)
-            ? ($data['specialty'] ?? null)
-            : null;
-
-        $payload = [
-            'academic_year_id' => $data['academic_year_id'],
-            'program_id' => $programId,
-            'level_id' => $data['level_id'],
-            'semester_id' => $data['semester_id'],
-            'class_name' => trim($data['class_name']),
-            'specialty' => $specialty,
-            'deliberation_date' => $data['deliberation_date'],
-        ];
-
-        if ($request->hasFile('file')) {
-            if ($pv->file_path && Storage::disk('local')->exists($pv->file_path)) {
-                Storage::disk('local')->delete($pv->file_path);
-            }
-
-            $uploadedFile = $request->file('file');
-            $payload['file_path'] = $uploadedFile->store('private/pvs', 'local');
-            $payload['file_name'] = $uploadedFile->getClientOriginalName();
-            $payload['file_type'] = $uploadedFile->getMimeType() ?? $uploadedFile->getClientMimeType();
-            $payload['file_size'] = $uploadedFile->getSize();
+        // Un CD ne peut déposer que pour sa propre filière
+        if ($user && ! $user->isDa()) {
+            $this->merge([
+                'program_id' => $user->program_id,
+            ]);
         }
-
-        $pv->update($payload);
-
-        $this->logAction($user->id, AuditLog::ACTION_UPDATED, $pv, "PV {$pv->class_name} mis à jour");
-
-        return redirect()
-            ->route('pvs.show', $pv)
-            ->with('success', 'PV mis à jour.');
     }
 
-    public function archive(Request $request, DeliberationPv $pv)
+    public function rules(): array
     {
-        $this->authorize('archive', $pv);
+        return [
+            'academic_year_id' => ['required', 'integer', 'exists:academic_years,id'],
+            'program_id'       => ['required', 'integer', 'exists:programs,id'],
+            'level_id'         => ['required', 'integer', 'exists:levels,id'],
+            'semester_id'      => ['required', 'integer', 'exists:semesters,id'],
+            'specialty'        => ['nullable', 'string', Rule::in(DeliberationPv::SPECIALTIES_IG)],
+            'deliberation_date'=> ['required', 'date'],
 
-        $pv->update([
-            'status' => DeliberationPv::STATUS_ARCHIVE,
-            'archived_at' => now(),
-        ]);
-
-        $this->logAction($request->user()->id, AuditLog::ACTION_ARCHIVED, $pv, "PV {$pv->class_name} archivé");
-
-        return back()->with('success', 'PV archivé.');
+            // Dépôt multi-fichiers
+            'items'               => ['required', 'array', 'min:1'],
+            'items.*.class_name'  => ['required', 'string', 'max:100'],
+            'items.*.file'        => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ];
     }
 
-    public function destroy(Request $request, DeliberationPv $pv)
-    {
-        $this->authorize('delete', $pv);
+    public function after(): array
+{
+    return [
+        function (Validator $validator) {
+            // 1. Cohérence niveau/semestre
+            if ($validator->errors()->has('level_id') || $validator->errors()->has('semester_id')) {
+                return;
+            }
 
-        $this->logAction($request->user()->id, AuditLog::ACTION_DELETED, $pv, "PV {$pv->class_name} supprimé");
+            $level = Level::find($this->input('level_id'));
+            $semester = Semester::find($this->input('semester_id'));
 
-        $pv->delete();
+            if (! $level || ! $semester || ! DeliberationPv::semesterApplies($level->code, $semester->code)) {
+                $validator->errors()->add(
+                    'semester_id',
+                    'Le semestre sélectionné ne correspond pas au niveau choisi.'
+                );
+            }
 
-        return redirect()
-            ->route('pvs.index')
-            ->with('success', 'PV supprimé.');
-    }
+            // 2. Spécialité
+            if ($this->filled('specialty')) {
+                $programId = $this->input('program_id');
+                $program = $programId ? Program::find($programId) : null;
 
-    public function viewFile(Request $request, DeliberationPv $pv)
-    {
-        $this->authorize('viewFile', $pv);
+                if ($program && $program->code !== DeliberationPv::IG_CODE) {
+                    $validator->errors()->add(
+                        'specialty',
+                        "La spécialité n'est autorisée que pour la filière Informatique de gestion (IG)."
+                    );
+                } elseif ($level && ! in_array($level->code, DeliberationPv::SPECIALTY_LEVELS, true)) {
+                    $validator->errors()->add(
+                        'specialty',
+                        "La spécialité ne s'applique qu'au niveau Licence 3 (L3)."
+                    );
+                }
+            }
 
-        abort_unless($pv->file_path && Storage::disk('local')->exists($pv->file_path), 404);
+            // 3. Doublons DANS LE LOT (class_name + toutes les clés métier)
+            $items = $this->input('items', []);
+            if (! is_array($items)) {
+                return;
+            }
 
-        $this->logAction($request->user()->id, AuditLog::ACTION_VIEWED, $pv, "Consultation du fichier {$pv->file_name}");
+            $seen = [];
+            foreach ($items as $index => $item) {
+                $name = trim((string) ($item['class_name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
 
-        return Storage::disk('local')->response(
-            $pv->file_path,
-            $pv->file_name,
-            ['Content-Type' => $pv->file_type ?: 'application/octet-stream']
-        );
-    }
-
-    private function logAction(int $userId, string $action, DeliberationPv $pv, ?string $details = null): void
-    {
-        AuditLog::create([
-            'user_id' => $userId,
-            'action' => $action,
-            'deliberation_pv_id' => $pv->id,
-            'details' => $details,
-            
-        ]);
-    }
+                if (isset($seen[$name])) {
+                    $validator->errors()->add(
+                        "items.$index.class_name",
+                        "Le nom de classe « $name » est déjà utilisé dans ce lot. Chaque PV doit avoir une classe unique."
+                    );
+                }
+                $seen[$name] = true;
+            }
+        },
+    ];
+}
 }

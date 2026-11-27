@@ -13,6 +13,7 @@ use App\Models\Semester;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class DeliberationPvController extends Controller
 {
@@ -88,6 +89,19 @@ class DeliberationPvController extends Controller
             $items = [];
 
             foreach ($data['items'] as $item) {
+                $className = trim($item['class_name']);
+                $exists = DeliberationPv::where('academic_year_id', $data['academic_year_id'])
+            ->where('program_id', $programId)
+            ->where('level_id', $data['level_id'])
+            ->where('semester_id', $data['semester_id'])
+            ->where('class_name', $className)
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'items' => "Un PV existe déjà pour la classe « $className » dans cette année/filière/niveau/semestre.",
+            ]);
+        }
                 /** @var \Illuminate\Http\UploadedFile $uploadedFile */
                 $uploadedFile = $item['file'];
                 $storedPath = $uploadedFile->store('private/pvs', 'local');
