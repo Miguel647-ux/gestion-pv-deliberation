@@ -1,19 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\AcademicYearController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Middleware\EnsureUserIsDa;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Routes d'administration — propriétaire : P1
-|--------------------------------------------------------------------------
-|
-| À remplir au pas 10 :
-|   - CRUD /admin/years       → admin.years.*
-|   - GET  /admin/users       → admin.users.index   (lecture seule)
-|   - GET  /admin/logs        → admin.logs.index    (lecture seule)
-|
-*/
-
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    // P1 remplira ici.
+Route::middleware(['auth', EnsureUserIsDa::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('years', AcademicYearController::class)->except(['show', 'destroy']);
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/logs', [AuditLogController::class, 'index'])->name('logs.index');
 });
