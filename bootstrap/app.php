@@ -18,8 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-        'da' => \App\Http\Middleware\EnsureIsDa::class,
-    ]);
+            'da' => \App\Http\Middleware\EnsureUserIsDa::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

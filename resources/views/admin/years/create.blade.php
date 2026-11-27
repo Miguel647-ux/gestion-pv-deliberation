@@ -1,52 +1,120 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Nouvelle année — ENEAM PV Archive</title>
-    <style>
-        body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 600px; }
-        h1 { margin-bottom: 1rem; }
-        form { display: flex; flex-direction: column; gap: 1rem; }
-        label { display: block; font-weight: 600; margin-bottom: .25rem; }
-        input[type=text], input[type=date] { width: 100%; padding: .5rem; border: 1px solid #ccc; border-radius: 4px; }
-        input[type=checkbox] { margin-right: .5rem; }
-        .error { color: #b91c1c; font-size: .9rem; margin-top: .25rem; }
-        button { padding: .5rem 1rem; background: #1e40af; color: #fff; border: none; border-radius: 4px; cursor: pointer; width: fit-content; }
-    </style>
-</head>
-<body>
-    <h1>Nouvelle année académique</h1>
-    <p><a href="{{ route('admin.years.index') }}">← Retour</a></p>
-
-    <form method="POST" action="{{ route('admin.years.store') }}">
-        @csrf
-
-        <div>
-            <label for="label">Libellé (ex. 2025-2026)</label>
-            <input type="text" id="label" name="label" value="{{ old('label') }}" required>
-            @error('label') <div class="error">{{ $message }}</div> @enderror
+<x-app-layout>
+    <div class="max-w-[700px] mx-auto px-margin py-space-lg w-full">
+        <!-- Back Navigation -->
+        <div class="mb-space-md flex items-center">
+            <a
+                href="{{ route('admin.years.index') }}"
+                class="inline-flex items-center gap-space-xs text-secondary hover:text-primary transition-colors font-label-md text-label-md"
+            >
+                <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <span>Retour aux années académiques</span>
+            </a>
         </div>
 
-        <div>
-            <label for="starts_on">Date de début</label>
-            <input type="date" id="starts_on" name="starts_on" value="{{ old('starts_on') }}" required>
-            @error('starts_on') <div class="error">{{ $message }}</div> @enderror
+        <!-- Page Header -->
+        <div class="pb-space-lg border-b border-outline-variant mb-space-lg">
+            <h1 class="font-serif text-[32px] font-semibold text-on-surface tracking-tight leading-tight">
+                Ajouter une année académique
+            </h1>
+            <p class="font-body-md text-body-md text-secondary mt-1">
+                Définissez les dates de la nouvelle session universitaire.
+            </p>
         </div>
 
-        <div>
-            <label for="ends_on">Date de fin</label>
-            <input type="date" id="ends_on" name="ends_on" value="{{ old('ends_on') }}" required>
-            @error('ends_on') <div class="error">{{ $message }}</div> @enderror
-        </div>
+        <form method="POST" action="{{ route('admin.years.store') }}" class="space-y-space-lg bg-surface-container-lowest border border-outline-variant rounded p-space-lg">
+            @csrf
 
-        <div>
-            <label>
-                <input type="checkbox" name="is_active" value="1" @checked(old('is_active'))>
-                Définir comme année active
-            </label>
-        </div>
+            <!-- Label -->
+            <div class="flex flex-col gap-1">
+                <label for="label" class="text-label-md font-label-md text-on-surface font-medium">
+                    Libellé de la session <span class="text-error">*</span>
+                </label>
+                <input
+                    type="text"
+                    name="label"
+                    id="label"
+                    required
+                    maxlength="20"
+                    value="{{ old('label') }}"
+                    placeholder="Ex. 2025-2026"
+                    class="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors"
+                >
+                <p class="text-label-sm text-outline mt-0.5">Format attendu : AAAA-AAAA (ex. 2025-2026).</p>
+                <x-input-error :messages="$errors->get('label')" class="mt-1" />
+            </div>
 
-        <button type="submit">Créer</button>
-    </form>
-</body>
-</html>
+            <!-- Dates grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+                <div class="flex flex-col gap-1">
+                    <label for="starts_on" class="text-label-md font-label-md text-on-surface font-medium">
+                        Date de début <span class="text-error">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        name="starts_on"
+                        id="starts_on"
+                        required
+                        value="{{ old('starts_on') }}"
+                        class="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                    >
+                    <x-input-error :messages="$errors->get('starts_on')" class="mt-1" />
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label for="ends_on" class="text-label-md font-label-md text-on-surface font-medium">
+                        Date de fin <span class="text-error">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        name="ends_on"
+                        id="ends_on"
+                        required
+                        value="{{ old('ends_on') }}"
+                        class="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                    >
+                    <x-input-error :messages="$errors->get('ends_on')" class="mt-1" />
+                </div>
+            </div>
+
+            <!-- Is Active / Current -->
+            <div class="pt-space-xs">
+                <input type="hidden" name="is_active" value="0">
+                <label for="is_active" class="inline-flex items-start gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        name="is_active"
+                        id="is_active"
+                        value="1"
+                        @checked(old('is_active'))
+                        class="mt-0.5 rounded border-outline-variant text-primary focus:ring-primary"
+                    >
+                    <div>
+                        <span class="font-label-md text-label-md text-on-surface font-medium block">Définir comme année académique courante</span>
+                        <span class="font-body-sm text-body-sm text-secondary block">
+                            Si cochée, cette session deviendra la période active par défaut et désactivera les autres années.
+                        </span>
+                    </div>
+                </label>
+                <x-input-error :messages="$errors->get('is_active')" class="mt-1" />
+            </div>
+
+            <!-- Submit bar -->
+            <div class="flex items-center justify-end gap-space-sm pt-space-md border-t border-outline-variant">
+                <a
+                    href="{{ route('admin.years.index') }}"
+                    class="px-space-md py-space-sm border border-outline-variant rounded font-label-md text-label-md text-secondary hover:text-on-surface transition-colors"
+                >
+                    Annuler
+                </a>
+                <button
+                    type="submit"
+                    class="px-space-lg py-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-space-xs transition-colors cursor-pointer"
+                >
+                    <span>Enregistrer l'année</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</x-app-layout>

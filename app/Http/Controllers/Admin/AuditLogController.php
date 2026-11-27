@@ -5,30 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $logs = AuditLog::with(['user', 'deliberationPv'])
-            ->when($request->filled('action'), function ($q) use ($request) {
-                $q->where('action', $request->input('action'));
-            })
+        $logs = AuditLog::with('user')
             ->latest()
-            ->paginate(50)
-            ->withQueryString();
+            ->paginate(20);
 
         return view('admin.logs.index', [
-            'logs'    => $logs,
-            'actions' => [
-                AuditLog::ACTION_CREATED,
-                AuditLog::ACTION_UPDATED,
-                AuditLog::ACTION_ARCHIVED,
-                AuditLog::ACTION_VIEWED,
-                AuditLog::ACTION_DELETED,
-            ],
-            'currentAction' => $request->input('action'),
+            'logs' => $logs,
         ]);
     }
 }

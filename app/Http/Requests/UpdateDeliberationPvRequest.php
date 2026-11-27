@@ -81,6 +81,24 @@ class UpdateDeliberationPvRequest extends FormRequest
                         'Le semestre sélectionné ne correspond pas au niveau choisi.'
                     );
                 }
+
+                if ($this->filled('specialty')) {
+                    $user = $this->user();
+                    $programId = $user?->isDa() ? $this->input('program_id') : $this->route('pv')?->program_id;
+                    $program = $programId ? \App\Models\Program::find($programId) : null;
+
+                    if ($program && $program->code !== DeliberationPv::IG_CODE) {
+                        $validator->errors()->add(
+                            'specialty',
+                            'La spécialité n\'est autorisée que pour la filière Informatique de gestion (IG).'
+                        );
+                    } elseif ($level && ! in_array($level->code, DeliberationPv::SPECIALTY_LEVELS, true)) {
+                        $validator->errors()->add(
+                            'specialty',
+                            'La spécialité ne s\'applique qu\'au niveau Licence 3 (L3).'
+                        );
+                    }
+                }
             },
         ];
     }
